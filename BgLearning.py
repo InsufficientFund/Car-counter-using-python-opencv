@@ -50,62 +50,68 @@ if __name__ == "__main__":
     while video.isOpened():
         ret, frame = video.read()
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        gray = noise_filtering(image=gray)
         if fgmask is None:
             fgbg = cv2.BackgroundSubtractorMOG()
             fgmask = fgbg.apply(frame)
             fgmask,fgbg = get_foreground(frame=gray, subtractor=fgbg, fg_mask=fgmask)
+
         else:
             fgmask,fgbg = get_foreground(frame=gray, subtractor=fgbg, fg_mask=fgmask)
 
-        fgmask = noise_filtering(image=fgmask)
-        edges = edges_detection(image=fgmask, lower_theshold=100, upper_threshold=200)
+        edges = edges_detection(image=fgmask, lower_theshold=50, upper_threshold=100)
 
-        dilation = cv2.dilate(edges, (5,5), iterations=1)
+        # dilation = cv2.dilate(edges, (5,5), iterations=1)
 
 
         #-----------------------------------------------------------------------------------------------
-        contours,hier = cv2.findContours(edges, cv2.RETR_CCOMP,cv2.CHAIN_APPROX_SIMPLE)
-        cnts = sorted(contours, key = cv2.contourArea, reverse = True)[:10]
-
-        # import ipdb;ipdb.set_trace()
-        if hier is not None:
-            true_len = len(contours)
-            LENGTH = len(cnts)
-            status = np.zeros((LENGTH, 1))
-            if true_len <= 100:
-                print true_len
-                for i, cnt1 in enumerate(cnts):
-                    x = i
-                    if i != LENGTH-1:
-                        for j, cnt2 in enumerate(cnts[i+1:]):
-                            x = x+1
-                            dist = find_if_close(cnt1,cnt2)
-                            if dist is True:
-                                val = min(status[i],status[x])
-                                status[x] = status[i] = val
-                            else:
-                                if status[x] == status[i]:
-                                    status[x] = i+1
-
-                unified = []
-                maximum = int(status.max())+1
-                for i in xrange(maximum):
-                    pos = np.where(status == i)[0]
-                    if pos.size != 0:
-                        cont = np.vstack(cnts[i] for i in pos)
-                        hull = cv2.convexHull(cont)
-                        unified.append(hull)
-
-                # cv2.drawContours(gray,unified,-1,(0,255,0),2)
-
-                cv2.drawContours(fgmask,unified,-1,255,-1)
+        # contours,hier = cv2.findContours(edges, cv2.RETR_CCOMP,cv2.CHAIN_APPROX_SIMPLE)
+        # cnts = sorted(contours, key = cv2.contourArea, reverse = True)[:10]
+        #
+        # # import ipdb;ipdb.set_trace()
+        # if hier is not None:
+        #     true_len = len(contours)
+        #     LENGTH = len(cnts)
+        #     status = np.zeros((LENGTH, 1))
+        #     if true_len <= 100:
+        #         print true_len
+        #         for i, cnt1 in enumerate(cnts):
+        #             x = i
+        #             if i != LENGTH-1:
+        #                 for j, cnt2 in enumerate(cnts[i+1:]):
+        #                     x = x+1
+        #                     dist = find_if_close(cnt1,cnt2)
+        #                     if dist is True:
+        #                         val = min(status[i],status[x])
+        #                         status[x] = status[i] = val
+        #                     else:
+        #                         if status[x] == status[i]:
+        #                             status[x] = i+1
+        #
+        #         unified = []
+        #         maximum = int(status.max())+1
+        #         for i in xrange(maximum):
+        #             pos = np.where(status == i)[0]
+        #             if pos.size != 0:
+        #                 cont = np.vstack(cnts[i] for i in pos)
+        #                 hull = cv2.convexHull(cont)
+        #                 unified.append(hull)
+        #
+        #         # cv2.drawContours(gray,unified,-1,(0,255,0),2)
+        #
+        #         cv2.drawContours(fgmask,unified,-1,255,-1)
         # im2, contours, hierarchy = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
         #-----------------------------------------------------------------------------------------------
-        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-        res = cv2.morphologyEx(dilation, cv2.MORPH_OPEN, kernel)
-        # cv2.morphologyEx(img, cv2.MORPH_OPEN, kernel)
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+        kernel = np.ones((10,10),np.uint8)
+        dilation = cv2.morphologyEx(fgmask, cv2.MORPH_CLOSE, kernel, iterations=3)
 
-        show_images(fgmask, gray)
+
+        contours,hier = cv2.findContours(dilation, cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(frame, contours, -1, (0, 255, 0), 3)
+
+
+        show_images(frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
