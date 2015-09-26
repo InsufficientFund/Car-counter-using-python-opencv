@@ -4,9 +4,11 @@ import sys
 
 
 def read_video():
+    if not sys.argv[1]:
+        sys.exit("Please enter video name.")
     vid = cv2.VideoCapture(sys.argv[1])
     if not vid:
-        sys.exit("bug")
+        sys.exit("File not found.")
     else:
         return vid
 
@@ -15,9 +17,9 @@ def get_background():
     pass
 
 
-def get_foreground(frame, fgbg , fgmask):
-    fgmask = fgbg.apply(frame, fgmask, 0.1)
-    return fgmask,fgbg
+def get_foreground(frame, subtractor, fg_mask, learn_rate = 0.05):
+    fg_mask = subtractor.apply(frame, fg_mask, learn_rate)
+    return fg_mask, subtractor
 
 
 def noise_filtering(image):
@@ -42,7 +44,6 @@ def find_if_close(cnt1, cnt2):
             elif i == row1-1 and j == row2-1:
                 return False
 
-
 if __name__ == "__main__":
     video = read_video()
     fgmask = None
@@ -52,9 +53,9 @@ if __name__ == "__main__":
         if fgmask is None:
             fgbg = cv2.BackgroundSubtractorMOG()
             fgmask = fgbg.apply(frame)
-            fgmask,fgbg = get_foreground(frame=gray, fgbg=fgbg, fgmask=fgmask)
+            fgmask,fgbg = get_foreground(frame=gray, subtractor=fgbg, fg_mask=fgmask)
         else:
-            fgmask,fgbg = get_foreground(frame=gray, fgbg=fgbg, fgmask=fgmask)
+            fgmask,fgbg = get_foreground(frame=gray, subtractor=fgbg, fg_mask=fgmask)
 
         fgmask = noise_filtering(image=fgmask)
         edges = edges_detection(image=fgmask, lower_theshold=100, upper_threshold=200)
