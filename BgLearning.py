@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 import sys
 from copy import deepcopy
+import collections
 
 def read_video():
     if not sys.argv[1]:
@@ -44,18 +45,30 @@ def find_if_close(cnt1, cnt2):
             elif i == row1-1 and j == row2-1:
                 return False
 
+def is_pass_upper_line( lane ):
+    pass
+
+
+
 if __name__ == "__main__":
     video = read_video()
     fgmask = None
     subtractor = cv2.BackgroundSubtractorMOG(history=500, nmixtures=10, backgroundRatio=0.5, noiseSigma=20)
     kernel = np.ones((10,10),np.uint8)
+    lane = {}
+    lane1 = { "up1":(155,182) , "up2":(225, 182) ,"low1":(105, 394), "low2":(235, 394),"is_empty":True, "pts":[] }
+    tempIM = np.zeros((640,480))
+
     while video.isOpened():
         ret, frame = video.read()
         res = frame
-        
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+        #gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         #gray = cv2.line(gray, (215, 142), (389, 142), (255, 0, 0), 5)
-        cv2.line(frame, (155, 142), (310, 142), (255, 0, 0), 5)
+        cv2.line(frame, (155, 182), (310, 182), (255, 0, 0), 5)
+        cv2.line(frame, (105, 394), (410, 394), (255, 0, 0), 5)
+        cv2.line(frame, (155, 182), (105, 394), (255, 0, 0), 5)
+        cv2.line(frame, (225, 182), (235, 394), (255, 0, 0), 5)
         filtered_frame = noise_filtering(image=frame)
         if fgmask is None:
             fgmask = subtractor.apply(filtered_frame, 0.1)
@@ -105,7 +118,6 @@ if __name__ == "__main__":
         #         # cv2.drawContours(gray,unified,-1,(0,255,0),2)
         #
         #         cv2.drawContours(fgmask,unified,-1,255,-1)
-
         # # im2, contours, hierarchy = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
         # #-----------------------------------------------------------------------------------------------
         # kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
@@ -121,10 +133,12 @@ if __name__ == "__main__":
             cx = int(moment['m10']/moment['m00'])
             cy = int(moment['m01']/moment['m00'])
             cv2.circle(res, (cx, cy), 3, (0, 0, 255), 4)
+            pX, pY, w, h =  cv2.boundingRect(obj)
+            cv2.rectangle(res,(pX, pY), (pX+w, pY+h),( 0, 255, 0 ), 2)
+
         cv2.drawContours(res, contours, -1, (0, 255, 0), 2)
         show_images(res)
         if cv2.waitKey(10) & 0xFF == ord('q'):
             break
     video.release()
     cv2.destroyAllWindows()
-
