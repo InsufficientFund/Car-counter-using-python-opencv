@@ -57,8 +57,12 @@ if __name__ == "__main__":
     kernel = np.ones((10,10),np.uint8)
     lane = {}
     lane1 = { "up1":(155,182) , "up2":(225, 182) ,"low1":(105, 394), "low2":(235, 394),"is_empty":True, "pts":[] }
-    tempIM = np.zeros((640,480))
-
+    points = np.array( [ [lane1["up1"]], [lane1["up2"]] , [lane1["low2"]] , [lane1["low1"]] ],np.int32 )
+    tempIM = np.zeros((480,640),np.uint8)
+    cv2.fillPoly(tempIM,[points], 255)
+    cv2.imshow("1", tempIM)
+    laneContour, hrc = cv2.findContours(tempIM, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    #import ipdb; ipdb.set_trace()
     while video.isOpened():
         ret, frame = video.read()
         res = frame
@@ -128,15 +132,32 @@ if __name__ == "__main__":
         #import ipdb; ipdb.set_trace()
         fgg = deepcopy(fgmask)
         contours, hierarchy = cv2.findContours(fgg, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        isIn = False
         for obj in contours:
             moment = cv2.moments(obj)
             cx = int(moment['m10']/moment['m00'])
             cy = int(moment['m01']/moment['m00'])
             cv2.circle(res, (cx, cy), 3, (0, 0, 255), 4)
             pX, pY, w, h =  cv2.boundingRect(obj)
-            cv2.rectangle(res,(pX, pY), (pX+w, pY+h),( 0, 255, 0 ), 2)
+            dist = cv2.pointPolygonTest(laneContour[0],(cx, cy) ,False)
+            if dist == 1:
+                isIn = True
+                cv2.rectangle(res,(pX, pY), (pX+w, pY+h),( 0, 255, 0 ), 2)
+                if lane1["is_empty"] == True:
+                    lane1["pts"].append( (cx, cy))
+                else:
+                    lane1["pts"].insert(0, (cx,cy))
+            else:
+                cv2.rectangle(res,(pX, pY), (pX+w, pY+h),( 255, 255, 0 ), 2)
 
-        cv2.drawContours(res, contours, -1, (0, 255, 0), 2)
+        if isIn:
+            #import ipdb; ipdb.set_trace()
+            cv2.polylines(res,np.int32([lane1["pts"]]), False, (0,255,0) ,3)
+        else:
+            lane1["is_empty"] = True
+            lane1["pts"] = []
+
+        #cv2.drawContours(res, contours, -1, (0, 255, 0), 2)
         show_images(res)
         if cv2.waitKey(10) & 0xFF == ord('q'):
             break
