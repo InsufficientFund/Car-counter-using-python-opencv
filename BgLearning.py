@@ -52,8 +52,8 @@ if __name__ == "__main__":
     while video.isOpened():
         ret, frame = video.read()
         res = frame
-
-        #gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         #gray = cv2.line(gray, (215, 142), (389, 142), (255, 0, 0), 5)
         cv2.line(frame, (155, 142), (310, 142), (255, 0, 0), 5)
         filtered_frame = noise_filtering(image=frame)
