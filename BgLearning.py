@@ -48,15 +48,19 @@ def find_if_close(cnt1, cnt2):
 def is_pass_upper_line( lane ):
     pass
 
-
+def get_lane():
+    pass
 
 if __name__ == "__main__":
+    count = 0
     video = read_video()
     fgmask = None
     subtractor = cv2.BackgroundSubtractorMOG(history=500, nmixtures=10, backgroundRatio=0.5, noiseSigma=20)
     kernel = np.ones((10,10),np.uint8)
     lane = {}
-    lane1 = { "up1":(155,182) , "up2":(225, 182) ,"low1":(105, 394), "low2":(235, 394),"is_empty":True, "pts":[] }
+    lane1 = {"up1": (155,182), "up2": (225, 182),
+             "low1": (105, 394), "low2": (235, 394),
+             "is_empty": True, "pts": []}
     points = np.array( [ [lane1["up1"]], [lane1["up2"]] , [lane1["low2"]] , [lane1["low1"]] ],np.int32 )
     tempIM = np.zeros((480,640),np.uint8)
     cv2.fillPoly(tempIM,[points], 255)
@@ -65,6 +69,8 @@ if __name__ == "__main__":
     #import ipdb; ipdb.set_trace()
     while video.isOpened():
         ret, frame = video.read()
+        if not ret  :
+            break
         res = frame
 
         #gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -144,7 +150,9 @@ if __name__ == "__main__":
                 isIn = True
                 cv2.rectangle(res,(pX, pY), (pX+w, pY+h),( 0, 255, 0 ), 2)
                 if lane1["is_empty"] == True:
+                    lane1["is_empty"] = False
                     lane1["pts"].append( (cx, cy))
+                    count += 1
                 else:
                     lane1["pts"].insert(0, (cx,cy))
             else:
@@ -158,8 +166,11 @@ if __name__ == "__main__":
             lane1["pts"] = []
 
         #cv2.drawContours(res, contours, -1, (0, 255, 0), 2)
+        cv2.putText(res,str(count),(10,100), cv2.FONT_HERSHEY_SIMPLEX, 4,(255,255,255),2)
         show_images(res)
+
         if cv2.waitKey(10) & 0xFF == ord('q'):
             break
+    print count
     video.release()
     cv2.destroyAllWindows()
