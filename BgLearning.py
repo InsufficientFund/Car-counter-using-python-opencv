@@ -45,40 +45,61 @@ def find_if_close(cnt1, cnt2):
             elif i == row1-1 and j == row2-1:
                 return False
 
-def is_pass_upper_line( lane ):
+def isIn( lane ):
     pass
 
 def get_lane():
     pass
 
+def show_pixel_point(event, x, y ,flags, param):
+    if event == cv2.EVENT_LBUTTONDBLCLK:
+        print x,y
+
 if __name__ == "__main__":
-    count = 0
+    count = [0]*2
     video = read_video()
     fgmask = None
     subtractor = cv2.BackgroundSubtractorMOG(history=500, nmixtures=10, backgroundRatio=0.5, noiseSigma=20)
+
     kernel = np.ones((10,10),np.uint8)
+
     lane = {}
     lane1 = {"up1": (155,182), "up2": (225, 182),
-             "low1": (105, 394), "low2": (235, 394),
+             "low1": (123, 326), "low2": (232, 326),
              "is_empty": True, "pts": []}
-    points = np.array( [ [lane1["up1"]], [lane1["up2"]] , [lane1["low2"]] , [lane1["low1"]] ],np.int32 )
-    tempIM = np.zeros((480,640),np.uint8)
-    cv2.fillPoly(tempIM,[points], 255)
-    cv2.imshow("1", tempIM)
-    laneContour, hrc = cv2.findContours(tempIM, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    lane2 = {"up1": (227,182), "up2": (302, 182),
+             "low1": (234, 326), "low2": (356, 326),
+             "is_empty": True, "pts": []}
+    points = []
+    points.append(np.array([[lane1["up1"]],
+                            [lane1["up2"]],
+                            [lane1["low2"]],
+                            [lane1["low1"]]], np.int32))
+    points.append(np.array([[lane2["up1"]],
+                            [lane2["up2"]],
+                            [lane2["low2"]],
+                            [lane2["low1"]]], np.int32))
+    laneIM = []
+    laneIM.append(np.zeros((480, 640), np.uint8))
+    laneIM.append(np.zeros((480, 640), np.uint8))
+    laneContour = [None]*2
+    for i in range(0, 2):
+        cv2.fillPoly(laneIM[i], [points[i]], 255)
+        cv2.imshow(str(i), laneIM[i])
+        laneContour[i], hrc = cv2.findContours(laneIM[i], cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     #import ipdb; ipdb.set_trace()
+    cv2.namedWindow('frame')
+    cv2.setMouseCallback('frame', show_pixel_point)
     while video.isOpened():
         ret, frame = video.read()
-        if not ret  :
+        if not ret:
             break
         res = frame
 
         #gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         #gray = cv2.line(gray, (215, 142), (389, 142), (255, 0, 0), 5)
-        cv2.line(frame, (155, 182), (310, 182), (255, 0, 0), 5)
-        cv2.line(frame, (105, 394), (410, 394), (255, 0, 0), 5)
-        cv2.line(frame, (155, 182), (105, 394), (255, 0, 0), 5)
-        cv2.line(frame, (225, 182), (235, 394), (255, 0, 0), 5)
+        cv2.polylines(frame,[points[0]],True, (0, 255, 0), 3)
+        cv2.polylines(frame,[points[1]],True, (255, 0, 0), 3)
         filtered_frame = noise_filtering(image=frame)
         if fgmask is None:
             fgmask = subtractor.apply(filtered_frame, 0.1)
@@ -138,35 +159,51 @@ if __name__ == "__main__":
         #import ipdb; ipdb.set_trace()
         fgg = deepcopy(fgmask)
         contours, hierarchy = cv2.findContours(fgg, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        isIn = False
+        isIn = [False, False]
         for obj in contours:
             moment = cv2.moments(obj)
             cx = int(moment['m10']/moment['m00'])
             cy = int(moment['m01']/moment['m00'])
             cv2.circle(res, (cx, cy), 3, (0, 0, 255), 4)
             pX, pY, w, h =  cv2.boundingRect(obj)
-            dist = cv2.pointPolygonTest(laneContour[0],(cx, cy) ,False)
-            if dist == 1:
-                isIn = True
-                cv2.rectangle(res,(pX, pY), (pX+w, pY+h),( 0, 255, 0 ), 2)
-                if lane1["is_empty"] == True:
-                    lane1["is_empty"] = False
-                    lane1["pts"].append( (cx, cy))
-                    count += 1
+            dist = [cv2.pointPolygonTest(laneContour[0][0], (cx, cy), False),
+                    cv2.pointPolygonTest(laneContour[1][0], (cx, cy), False)]
+            for i in range(0, 2):
+                if dist[i] == 1:
+                    isIn[i] = True
+                    cv2.rectangle(res,(pX, pY), (pX+w, pY+h),( 0, 255, 0 ), 2)
+                    if i == 0:
+                        if lane1["is_empty"] == True:
+                            lane1["is_empty"] = False
+                            lane1["pts"].append( (cx, cy))
+                            count[0] += 1
+                        else:
+                            lane1["pts"].insert(0, (cx,cy))
+                    else:
+                        if lane2["is_empty"] == True:
+                            lane2["is_empty"] = False
+                            lane2["pts"].append( (cx, cy))
+                            count[1] += 1
+                        else:
+                            lane2["pts"].insert(0, (cx,cy))
                 else:
-                    lane1["pts"].insert(0, (cx,cy))
-            else:
-                cv2.rectangle(res,(pX, pY), (pX+w, pY+h),( 255, 255, 0 ), 2)
+                    cv2.rectangle(res,(pX, pY), (pX+w, pY+h),( 255, 255, 0 ), 2)
 
-        if isIn:
+        if isIn[0]:
             #import ipdb; ipdb.set_trace()
             cv2.polylines(res,np.int32([lane1["pts"]]), False, (0,255,0) ,3)
         else:
             lane1["is_empty"] = True
             lane1["pts"] = []
+        if isIn[1]:
+            #import ipdb; ipdb.set_trace()
+            cv2.polylines(res,np.int32([lane2["pts"]]), False, (0,255,0) ,3)
+        else:
+            lane2["is_empty"] = True
+            lane2["pts"] = []
 
         #cv2.drawContours(res, contours, -1, (0, 255, 0), 2)
-        cv2.putText(res,str(count),(10,100), cv2.FONT_HERSHEY_SIMPLEX, 4,(255,255,255),2)
+        cv2.putText(res,str(count[0]),(10,100), cv2.FONT_HERSHEY_SIMPLEX, 4,(255,255,255),2)
         show_images(res)
 
         if cv2.waitKey(10) & 0xFF == ord('q'):
