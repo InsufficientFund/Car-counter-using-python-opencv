@@ -204,6 +204,7 @@ if __name__ == "__main__":
 
         #cv2.drawContours(res, contours, -1, (0, 255, 0), 2)
         cv2.putText(res,str(count[0]),(10,100), cv2.FONT_HERSHEY_SIMPLEX, 4,(255,255,255),2)
+        cv2.putText(res,str(count[1]),(450,100), cv2.FONT_HERSHEY_SIMPLEX, 4,(255,255,255),2)
         show_images(res)
 
         if cv2.waitKey(10) & 0xFF == ord('q'):
