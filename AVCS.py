@@ -14,12 +14,11 @@ class AVCS:
         self.sampleFrame = None
         self.subtractor = self.subtractor = cv2.BackgroundSubtractorMOG2(1000, 120, False)
         self.lane = {"0": {"upLeft": (0, 0), "upRight": (0, 0),
-                     "lowLeft": (0, 0), "lowRight": (0, 0),
-                     "lowLeft": (0, 0), "lowRight": (0, 0),
+                           "lowLeft": (0, 0), "lowRight": (0, 0),
                      "is_empty": True, "pts": []},
                      "1": {"upLeft": (0, 0), "upRight": (0, 0),
-                     "lowLeft": (0, 0), "lowRight": (0, 0),
-                     "is_empty": True, "pts": []}}
+                           "lowLeft": (0, 0), "lowRight": (0, 0),
+                           "is_empty": True, "pts": []}}
         self.laneIm = [np.zeros((480, 640), np.uint8),
                         np.zeros((480, 640), np.uint8)]
         self.laneContour = [None] * 2
@@ -30,8 +29,8 @@ class AVCS:
     def __del__(self):
         pass
 
-    def readVideo(self, input):
-        self.video = cv2.VideoCapture(input)
+    def readVideo(self, inputName):
+        self.video = cv2.VideoCapture(inputName)
 
     def setLane(self, laneNum, upLeft, upRight, lowLeft, lowRight):
         self.lane[str(laneNum)] = {"upLeft": upLeft, "upRight": upRight,
@@ -156,7 +155,7 @@ class AVCS:
         cv2.destroyAllWindows()
         print self.typeCar
 
-        totalAtr = np.array(self.sizeCar[0]+ self.sizeCar[1])
+        totalAtr = np.array(self.sizeCar[0] + self.sizeCar[1])
         k_means = KMeans(init='k-means++', n_clusters=3, n_init=10)
         k_means.fit(totalAtr)
         k_means_labels = k_means.labels_
@@ -169,10 +168,10 @@ class AVCS:
         for k, col in zip(range(3), colors):
             members = k_means_labels == k
             cluster_center = k_means_cluster_centers[k]
-            plt.plot(totalAtr[members,0], totalAtr[members, 1], 'w',
-                    markerfacecolor=col, marker='.')
+            plt.plot(totalAtr[members, 0], totalAtr[members, 1], 'w',
+                     markerfacecolor=col, marker='.')
             plt.plot(cluster_center[0], cluster_center[1], 'o', markerfacecolor=col,
-                    markeredgecolor='k', markersize=6)
+                     markeredgecolor='k', markersize=6)
         plt.title('KMeans')
         plt.grid(True)
         plt.show()
@@ -181,4 +180,3 @@ class AVCS:
             member = k_means_labels == cluster
             members.append(member)
         self.writeClusters(totalAtr, members)
-
