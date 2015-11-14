@@ -11,13 +11,15 @@ class AVCS:
         self.count = [0] * 2
         self.video = None
         self.fgMask = None
-        self.subtractor = cv2.BackgroundSubtractorMOG2(500, 120, False)
+        self.sampleFrame = None
+        self.subtractor = self.subtractor = cv2.BackgroundSubtractorMOG2(1000, 120, False)
         self.lane = {"0": {"upLeft": (0, 0), "upRight": (0, 0),
-                       "lowLeft": (0, 0), "lowRight": (0, 0),
-                       "is_empty": True, "pts": []},
-                      "1" : {"upLeft": (0, 0), "upRight": (0, 0),
-                       "lowLeft": (0, 0), "lowRight": (0, 0),
-                       "is_empty": True, "pts": []}}
+                     "lowLeft": (0, 0), "lowRight": (0, 0),
+                     "lowLeft": (0, 0), "lowRight": (0, 0),
+                     "is_empty": True, "pts": []},
+                     "1": {"upLeft": (0, 0), "upRight": (0, 0),
+                     "lowLeft": (0, 0), "lowRight": (0, 0),
+                     "is_empty": True, "pts": []}}
         self.laneIm = [np.zeros((480, 640), np.uint8),
                         np.zeros((480, 640), np.uint8)]
         self.laneContour = [None] * 2
@@ -49,9 +51,9 @@ class AVCS:
     def sampleImage(self):
         if self.video.isOpened():
             self.video.set(cv2.cv.CV_CAP_PROP_POS_MSEC, 0)
-            ret, frame = self.video.read()
+            ret, self.sampleFrame = self.video.read()
         if ret:
-            cv2.imshow('frame', frame)
+            cv2.imshow('frame', self.sampleFrame)
             cv2.waitKey(0)
 
     def writeClusters(self, data, members):
@@ -61,13 +63,22 @@ class AVCS:
                 dataF.write(str(atr1) + ", " + str(atr2) + ", " + str(cluster) + "\n")
         dataF.close()
 
+    def getBackground(self, data, avg):
+        cv2.accumulateWeighted(data, avg, 0.01)
+        res = cv2.convertScaleAbs(avg)
+        return res
+
     def run(self, cntStatus = True, saveVid = False, showVid = True ):
         self.video.set(cv2.cv.CV_CAP_PROP_POS_MSEC, 0)
         kernel = np.ones((10, 10), np.uint8)
         fourcc = cv2.cv.CV_FOURCC(*'XVID')
-        testW = cv2.VideoWriter('videos.avi',fourcc,15,(640, 480))
+        vidWriter = cv2.VideoWriter('videos.avi', fourcc, 15, (640, 480))
+
+        avg = np.float32(self.sampleFrame)
         while self.video.isOpened():
             ret, frame = self.video.read()
+            bgFrame = self.getBackground(frame, avg)
+            cv2.imshow('background', bgFrame)
             if not ret:
                 break
             res = frame
@@ -76,13 +87,16 @@ class AVCS:
             filteredFrame = cv2.GaussianBlur(frame, (5, 5), 0)
             if self.fgMask is None:
                 self.fgMask = self.subtractor.apply(filteredFrame, 0.0005)
-            self.fgMask = self.subtractor.apply(filteredFrame, self.fgMask, 0.001)
+
+            self.fgMask = self.subtractor.apply(filteredFrame, self.fgMask, -1)
             self.fgMask = cv2.dilate(self.fgMask, kernel, iterations=1)
             self.fgMask = cv2.erode(self.fgMask, kernel, iterations=1)
+
             self.fgMask = cv2.morphologyEx(self.fgMask, cv2.MORPH_CLOSE, np.ones((30, 30), np.uint8))
             self.fgMask = cv2.morphologyEx(self.fgMask, cv2.MORPH_CLOSE, np.ones((30, 30), np.uint8))
+            self.fgMask = cv2.morphologyEx(self.fgMask, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
             tempMask = deepcopy(self.fgMask)
-            contours, hrc = cv2.findContours(tempMask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            contours, hrc = cv2.findContours(tempMask, cv2.RETR_LIST, cv2.CHAIN_APPROX_TC89_KCOS)
             isIn = [False]*2
             for obj in contours:
                 moment = cv2.moments(obj)
@@ -103,7 +117,7 @@ class AVCS:
                             self.lane[str(i)]["is_empty"] = False
                             self.lane[str(i)]["pts"].append((cx, cy))
                             self.count[i] += 1
-                            self.sizeCar[i].append( [w/float(h), w*h/cv2.contourArea(self.laneContour[i][0]) ] )
+                            self.sizeCar[i].append([w/float(h), w*h/cv2.contourArea(self.laneContour[i][0])])
                             if w*h < 1600:
                                 self.typeCar["small"] += 1
                             elif w*h < 9500:
@@ -131,13 +145,14 @@ class AVCS:
                 cv2.putText(res, 'motorcycle: '+str( self.typeCar["small"]), (400, 110), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
             if showVid:
-                cv2.imshow('frame', res)
-                if cv2.waitKey(10) & 0xFF == ord('q'):
+                resMask = cv2.bitwise_and(frame, frame, mask=~self.fgMask)
+                cv2.imshow('frame', resMask)
+                if cv2.waitKey(20) & 0xFF == ord('q'):
                     break
-            testW.write(res)
+            vidWriter.write(res)
         print self.count
         self.video.release()
-        testW.release()
+        vidWriter.release()
         cv2.destroyAllWindows()
         print self.typeCar
 
@@ -166,5 +181,4 @@ class AVCS:
             member = k_means_labels == cluster
             members.append(member)
         self.writeClusters(totalAtr, members)
-        import ipdb;ipdb.set_trace()
 
