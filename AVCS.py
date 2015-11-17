@@ -12,7 +12,7 @@ class AVCS:
         self.video = None
         self.fgMask = None
         self.sampleFrame = None
-        self.subtractor = self.subtractor = cv2.BackgroundSubtractorMOG2(1000, 120, False)
+        self.subtractor = self.subtractor = cv2.BackgroundSubtractorMOG2(500, 120, False)
         self.lane = {"0": {"upLeft": (0, 0), "upRight": (0, 0),
                            "lowLeft": (0, 0), "lowRight": (0, 0),
                      "is_empty": True, "pts": []},
@@ -76,17 +76,16 @@ class AVCS:
         avg = np.float32(self.sampleFrame)
         while self.video.isOpened():
             ret, frame = self.video.read()
-            bgFrame = self.getBackground(frame, avg)
-            cv2.imshow('background', bgFrame)
             if not ret:
                 break
+            bgFrame = self.getBackground(frame, avg)
+            cv2.imshow('background', bgFrame)
             res = frame
             cv2.polylines(frame, [self.points[0]], True, (0, 255, 0), 3)
             cv2.polylines(frame, [self.points[1]], True, (125, 0, 255), 3)
-            filteredFrame = cv2.GaussianBlur(frame, (5, 5), 0)
+            filteredFrame = frame#cv2.GaussianBlur(frame, (5, 5), 0)
             if self.fgMask is None:
-                self.fgMask = self.subtractor.apply(filteredFrame, 0.0005)
-
+                self.fgMask = self.subtractor.apply(filteredFrame, -1)
             self.fgMask = self.subtractor.apply(filteredFrame, self.fgMask, -1)
             self.fgMask = cv2.dilate(self.fgMask, kernel, iterations=1)
             self.fgMask = cv2.erode(self.fgMask, kernel, iterations=1)
@@ -146,7 +145,7 @@ class AVCS:
             if showVid:
                 resMask = cv2.bitwise_and(frame, frame, mask=~self.fgMask)
                 cv2.imshow('frame', resMask)
-                if cv2.waitKey(20) & 0xFF == ord('q'):
+                if cv2.waitKey(10) & 0xFF == ord('q'):
                     break
             vidWriter.write(res)
         print self.count

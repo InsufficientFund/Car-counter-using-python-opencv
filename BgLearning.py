@@ -95,8 +95,8 @@ if __name__ == "__main__":
             break
         res = frame
 
-        cv2.polylines(frame,[points[0]],True, (0, 255, 0), 3)
-        cv2.polylines(frame,[points[1]],True, (255, 0, 0), 3)
+        cv2.polylines(frame, [points[0]], True, (0, 255, 0), 3)
+        cv2.polylines(frame, [points[1]], True, (255, 0, 0), 3)
         filtered_frame = noise_filtering(image=frame)
         if fgmask is None:
             fgmask = subtractor.apply(filtered_frame, 0.1)
@@ -157,6 +157,7 @@ if __name__ == "__main__":
         show_images(res)
 
         if cv2.waitKey(10) & 0xFF == ord('q'):
+            cv2.imwrite('testt.png',res)
             break
     print count
     video.release()
