@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from copy import deepcopy
+#from skimage import feature
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 import math
@@ -13,7 +14,8 @@ class AVCS:
         self.video = None
         self.fgMask = None
         self.sampleFrame = None
-        self.subtractor = self.subtractor = cv2.BackgroundSubtractorMOG2(500, 120, False)
+        #self.subtractor = cv2.BackgroundSubtractorMOG(history=150, nmixtures=20, backgroundRatio=0.7, noiseSigma=25)
+        self.subtractor = cv2.BackgroundSubtractorMOG2(150, 200, False)
         self.lane = {"0": {"upLeft": (0, 0), "upRight": (0, 0),
                            "lowLeft": (0, 0), "lowRight": (0, 0),
                      "is_empty": True, "pts": []},
@@ -80,6 +82,7 @@ class AVCS:
         total1 = 0
         total2 = 0
         dataPlot = []
+        test = None
         while self.video.isOpened():
             currentObj = []
             ret, frame = self.video.read()
@@ -91,10 +94,12 @@ class AVCS:
             res = frame
             cv2.polylines(frame, [self.points[0]], True, (0, 255, 0), 3)
             cv2.polylines(frame, [self.points[1]], True, (125, 0, 255), 3)
-            filteredFrame = frame#cv2.GaussianBlur(frame, (5, 5), 0)
+            filteredFrame = cv2.GaussianBlur(frame, (5, 5), 0)
             if self.fgMask is None:
                 self.fgMask = self.subtractor.apply(filteredFrame, -1)
-            self.fgMask = self.subtractor.apply(filteredFrame, self.fgMask, -1)
+                test = deepcopy(self.fgMask)
+            self.fgMask = self.subtractor.apply(filteredFrame,self.fgMask, -1)
+            #test = deepcopy(self.fgMask)
             self.fgMask = cv2.dilate(self.fgMask, kernel, iterations=1)
             self.fgMask = cv2.erode(self.fgMask, kernel, iterations=1)
 
@@ -115,16 +120,16 @@ class AVCS:
                 cy = int(moment['m01']/moment['m00'])
                 pX, pY, w, h = cv2.boundingRect(obj)
                 if cv2.pointPolygonTest(self.laneContour[0][0], (cx, cy), False) == 1:
-                    carObj = {"centroid": (cx, cy), "origin": (pX, pY), "height": h, "width": w}
+                    carObj = {"centroid": (cx, cy+h/2), "origin": (pX, pY), "height": h, "width": w}
                     laneObj[0].append(carObj)
                 elif cv2.pointPolygonTest(self.laneContour[1][0], (cx, cy), False) == 1:
-                    carObj = {"centroid": (cx, cy), "origin": (pX, pY), "height": h, "width": w}
+                    carObj = {"centroid": (cx, cy+h/2), "origin": (pX, pY), "height": h, "width": w}
                     laneObj[1].append(carObj)
-                elif cx >= 123 and cx <= 232 and cy >= 326 and cy <= 366 :
-                    carObj = {"centroid": (cx, cy), "origin": (pX, pY), "height": h, "width": w}
+                elif cx >= 123 and cx <= 232 and cy >= 285 and cy <= 336 :
+                    carObj = {"centroid": (cx, cy+h/2), "origin": (pX, pY), "height": h, "width": w}
                     outLane1.append(carObj)
-                elif cx >= 232 and cx <= 356 and cy >= 326 and cy <= 366 :
-                    carObj = {"centroid": (cx, cy), "origin": (pX, pY), "height": h, "width": w}
+                elif cx >= 232 and cx <= 356 and cy >= 285 and cy <= 336 :
+                    carObj = {"centroid": (cx, cy+h/2), "origin": (pX, pY), "height": h, "width": w}
                     outLane2.append(carObj)
 
             for i in outLane1:
@@ -144,7 +149,13 @@ class AVCS:
                         self.typeCar["medium"] += 1
                     else:
                         self.typeCar["large"] += 1
+                    originX = i["origin"][0]
+                    originY = i["origin"][1]
+                    crop_img = frameOrigin[originY:originY + i["height"], originX:originX+i["width"]]
+                    normalImage = cv2.resize(crop_img, (64, 64))
+                    cv2.imwrite('/home/sayong/car/lane1'+str(total1)+'.png', normalImage )
                     lane1.remove(fObj1)
+
             for i in lane1:
                 i["stat"] = False
             for i in laneObj[0]:
@@ -186,6 +197,11 @@ class AVCS:
                         self.typeCar["medium"] += 1
                     else:
                         self.typeCar["large"] += 1
+                    originX = i["origin"][0]
+                    originY = i["origin"][1]
+                    crop_img = frameOrigin[originY:originY + i["height"], originX:originX+i["width"]]
+                    normalImage = cv2.resize(crop_img, (64, 64))
+                    cv2.imwrite('/home/sayong/car/lane2'+str(total2)+'.png', normalImage )
                     lane2.remove(fObj2)
             for i in lane2:
                 i["stat"] = False
@@ -216,11 +232,12 @@ class AVCS:
                 moment = cv2.moments(obj)
                 if moment['m00'] == 0:
                     continue
-                cx = int(moment['m10']/moment['m00'])
-                cy = int(moment['m01']/moment['m00'])
-                cv2.circle(res, (cx, cy), 3, (0, 0, 255), 4)
-                pX, pY, w, h = cv2.boundingRect(obj)
 
+
+                pX, pY, w, h = cv2.boundingRect(obj)
+                cx = int(moment['m10']/moment['m00'])
+                cy = int(moment['m01']/moment['m00'])+h/2
+                cv2.circle(res, (cx, cy), 3, (0, 0, 255), 4)
                 distance = [cv2.pointPolygonTest(self.laneContour[0][0], (cx, cy), False),
                             cv2.pointPolygonTest(self.laneContour[1][0], (cx, cy), False)]
                 for i in range(0, 2):
@@ -265,7 +282,7 @@ class AVCS:
                 resMask = cv2.bitwise_and(frame, frame, mask=~self.fgMask)
                 cv2.imshow('frame', res)
                 vidWriter.write(res)
-                if cv2.waitKey(10) & 0xFF == ord('q'):
+                if cv2.waitKey(8) & 0xFF == ord('q'):
                     cv2.imwrite('tesf.png', frameOrigin)
                     cv2.imwrite('tesM.png', self.fgMask)
                     break
@@ -276,33 +293,33 @@ class AVCS:
         cv2.destroyAllWindows()
         print self.typeCar
         #print currentObj
-        totalAtr = np.array(self.sizeCar[0] + self.sizeCar[1])
-        k_means = KMeans(init='k-means++', n_clusters=3, n_init=10)
-        k_means.fit(totalAtr)
-        k_means_labels = k_means.labels_
-        k_means_cluster_centers = k_means.cluster_centers_
-        k_means_labels_unique = np.unique(k_means_labels)
-        colors = ['#4EACC5', '#FF9C34', '#4E9A06']
-        plt.figure()
-
-        plt.hold(True)
-        for k, col in zip(range(3), colors):
-            members = k_means_labels == k
-            cluster_center = k_means_cluster_centers[k]
-            plt.plot(totalAtr[members, 0], totalAtr[members, 1], 'w',
-                     markerfacecolor=col, marker='.')
-            plt.plot(cluster_center[0], cluster_center[1], 'o', markerfacecolor=col,
-                     markeredgecolor='k', markersize=6)
-        plt.title('KMeans')
-        plt.grid(True)
-        plt.show()
+        # totalAtr = np.array(self.sizeCar[0] + self.sizeCar[1])
+        # k_means = KMeans(init='k-means++', n_clusters=3, n_init=10)
+        # k_means.fit(totalAtr)
+        # k_means_labels = k_means.labels_
+        # k_means_cluster_centers = k_means.cluster_centers_
+        # k_means_labels_unique = np.unique(k_means_labels)
+        # colors = ['#4EACC5', '#FF9C34', '#4E9A06']
+        # plt.figure()
+        #
+        # plt.hold(True)
+        # for k, col in zip(range(3), colors):
+        #     members = k_means_labels == k
+        #     cluster_center = k_means_cluster_centers[k]
+        #     plt.plot(totalAtr[members, 0], totalAtr[members, 1], 'w',
+        #              markerfacecolor=col, marker='.')
+        #     plt.plot(cluster_center[0], cluster_center[1], 'o', markerfacecolor=col,
+        #              markeredgecolor='k', markersize=6)
+        # plt.title('KMeans')
+        # plt.grid(True)
+        # plt.show()
         plt.figure(3)
         plt.plot(dataPlot)
         plt.ylabel('some numbers')
         plt.show()
-        print dataPlot
-        members = []
-        for cluster in range(3):
-            member = k_means_labels == cluster
-            members.append(member)
-        self.writeClusters(totalAtr, members)
+        # print dataPlot
+        # members = []
+        # for cluster in range(3):
+        #     member = k_means_labels == cluster
+        #     members.append(member)
+        # self.writeClusters(totalAtr, members)
