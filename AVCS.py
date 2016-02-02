@@ -1,11 +1,35 @@
 import cv2
 import numpy as np
 from copy import deepcopy
-#from skimage import feature
+from skimage import feature
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 import math
 
+class LocalBinaryPatterns:
+    def __init__(self, numPoints, radius):
+        # store the number of points and radius
+        self.numPoints = numPoints
+        self.radius = radius
+
+    def describe(self, image, eps=1e-7):
+        # compute the Local Binary Pattern representation
+        # of the image, and then use the LBP representation
+        # to build the histogram of patterns
+        lbp = feature.local_binary_pattern(image, self.numPoints,
+            self.radius, method="uniform")
+        (hist, _) = np.histogram(lbp.ravel(),
+            bins=np.arange(0, self.numPoints + 2),
+            range=(0, self.numPoints + 1))
+
+        # normalize the histogram
+        hist = hist.astype("float")
+        hist /= (hist.sum() + eps)
+
+        # return the histogram of Local Binary Patterns
+        return hist, lbp
 
 class AVCS:
     """docstring for ClassName"""
@@ -28,6 +52,7 @@ class AVCS:
         self.points = [None] * 2
         self.sizeCar =[[], []]
         self.typeCar = {"small": 0, "medium": 0, "large": 0}
+        self.lbp = LocalBinaryPatterns(8, 1)
 
     def __del__(self):
         pass
@@ -153,7 +178,11 @@ class AVCS:
                     originY = i["origin"][1]
                     crop_img = frameOrigin[originY:originY + i["height"], originX:originX+i["width"]]
                     normalImage = cv2.resize(crop_img, (64, 64))
-                    cv2.imwrite('/home/sayong/car/lane1'+str(total1)+'.png', normalImage )
+                    grayImg = cv2.cvtColor(normalImage, cv2.COLOR_BGR2GRAY)
+                    hist, lbp = self.lbp.describe(grayImg)
+                    equ = cv2.equalizeHist(grayImg)
+                    grayEqu = np.hstack((grayImg,equ)) #stacking images side-by-side
+                    cv2.imwrite('/home/sayong/car/lane1'+str(total1)+'.png', grayEqu)
                     lane1.remove(fObj1)
 
             for i in lane1:
@@ -201,7 +230,11 @@ class AVCS:
                     originY = i["origin"][1]
                     crop_img = frameOrigin[originY:originY + i["height"], originX:originX+i["width"]]
                     normalImage = cv2.resize(crop_img, (64, 64))
-                    cv2.imwrite('/home/sayong/car/lane2'+str(total2)+'.png', normalImage )
+                    grayImg = cv2.cvtColor(normalImage, cv2.COLOR_BGR2GRAY)
+                    hist, lbp = self.lbp.describe(grayImg)
+                    equ = cv2.equalizeHist(grayImg)
+                    grayEqu = np.hstack((grayImg,equ)) #stacking images side-by-side
+                    cv2.imwrite('/home/sayong/car/lane2'+str(total2)+'.png', grayEqu)
                     lane2.remove(fObj2)
             for i in lane2:
                 i["stat"] = False
