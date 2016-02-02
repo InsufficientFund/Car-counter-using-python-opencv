@@ -23,7 +23,7 @@ class AVCS:
                         np.zeros((480, 640), np.uint8)]
         self.laneContour = [None] * 2
         self.points = [None] * 2
-        self.sizeCar =[[], []]
+        self.sizeCar = [[], []]
         self.typeCar = {"small": 0, "medium": 0, "large": 0}
 
     def __del__(self):
@@ -40,8 +40,8 @@ class AVCS:
                                         [self.lane[str(laneNum)]["upRight"]],
                                         [self.lane[str(laneNum)]["lowRight"]],
                                         [self.lane[str(laneNum)]["lowLeft"]]], np.int32)
-        cv2.fillPoly( self.laneIm[laneNum], [self.points[laneNum]], 255)
-        self.laneContour[laneNum], hrc = cv2.findContours( self.laneIm[laneNum], cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE )
+        cv2.fillPoly(self.laneIm[laneNum], [self.points[laneNum]], 255)
+        self.laneContour[laneNum], hrc = cv2.findContours(self.laneIm[laneNum], cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE )
 
     def showPoint(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDBLCLK:
@@ -83,7 +83,8 @@ class AVCS:
             res = frame
             cv2.polylines(frame, [self.points[0]], True, (0, 255, 0), 3)
             cv2.polylines(frame, [self.points[1]], True, (125, 0, 255), 3)
-            filteredFrame = frame#cv2.GaussianBlur(frame, (5, 5), 0)
+            filteredFrame = frame
+            #cv2.GaussianBlur(frame, (5, 5), 0)
             if self.fgMask is None:
                 self.fgMask = self.subtractor.apply(filteredFrame, -1)
             self.fgMask = self.subtractor.apply(filteredFrame, self.fgMask, -1)
