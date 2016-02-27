@@ -46,13 +46,18 @@ class AVCS:
                      "1": {"upLeft": (0, 0), "upRight": (0, 0),
                            "lowLeft": (0, 0), "lowRight": (0, 0),
                            "is_empty": True, "pts": []}}
+        self.lanes = []
         self.laneIm = [np.zeros((480, 640), np.uint8),
                         np.zeros((480, 640), np.uint8)]
+        self.lanesImage = []
         self.laneContour = [None] * 2
+        self.laneContours = [None]
         self.points = [None] * 2
+        self.lanePoints = []
         self.sizeCar =[[], []]
         self.typeCar = {"small": 0, "medium": 0, "large": 0}
         self.lbp = LocalBinaryPatterns(8, 1)
+        self.totalLane = 2
 
     def __del__(self):
         pass
@@ -68,8 +73,23 @@ class AVCS:
                                         [self.lane[str(laneNum)]["upRight"]],
                                         [self.lane[str(laneNum)]["lowRight"]],
                                         [self.lane[str(laneNum)]["lowLeft"]]], np.int32)
-        cv2.fillPoly( self.laneIm[laneNum], [self.points[laneNum]], 255)
-        self.laneContour[laneNum], hrc = cv2.findContours( self.laneIm[laneNum], cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE )
+        cv2.fillPoly(self.laneIm[laneNum], [self.points[laneNum]], 255)
+        self.laneContour[laneNum], hrc = cv2.findContours(self.laneIm[laneNum], cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    def addLane(self, upLeft, upRight, lowLeft, lowRight):
+        self.lanes.append({"upLeft": upLeft, "upRight": upRight,
+                           "lowLeft": lowLeft, "lowRight": lowRight,
+                           "is_empty": True, "pts": []})
+        point = np.array([[upLeft],
+                          [upRight],
+                          [lowLeft],
+                          [lowRight]], np.int32)
+        self.lanePoints.append(point)
+        laneImage = np.zeros((480, 640), np.uint8)
+        cv2.fillPoly(laneImage, [point], 255)
+        self.lanesImage.append(laneImage)
+        contour, hrc = cv2.findContours(laneImage, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        self.laneContours.append(contour)
 
     def showPoint(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDBLCLK:
@@ -102,6 +122,10 @@ class AVCS:
         vidWriter = cv2.VideoWriter('/home/sayong/videos.avi', fourcc, 15, (640, 480))
 
         avg = np.float32(self.sampleFrame)
+
+        lanes = [] * self.totalLane
+        numCars = [] * self.totalLane
+
         lane1 = []
         lane2 = []
         total1 = 0
