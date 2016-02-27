@@ -181,8 +181,8 @@ class AVCS:
                     grayImg = cv2.cvtColor(normalImage, cv2.COLOR_BGR2GRAY)
                     hist, lbp = self.lbp.describe(grayImg)
                     equ = cv2.equalizeHist(grayImg)
-                    grayEqu = np.hstack((grayImg,equ)) #stacking images side-by-side
-                    cv2.imwrite('/home/sayong/car/lane1'+str(total1)+'.png', grayEqu)
+                    cv2.imwrite('/home/sayong/car/lane5'+str(total1)+'.png', equ)
+                    cv2.imwrite('/home/sayong/car1/lane5'+str(total1)+'.png', crop_img)
                     lane1.remove(fObj1)
 
             for i in lane1:
@@ -233,8 +233,8 @@ class AVCS:
                     grayImg = cv2.cvtColor(normalImage, cv2.COLOR_BGR2GRAY)
                     hist, lbp = self.lbp.describe(grayImg)
                     equ = cv2.equalizeHist(grayImg)
-                    grayEqu = np.hstack((grayImg,equ)) #stacking images side-by-side
-                    cv2.imwrite('/home/sayong/car/lane2'+str(total2)+'.png', grayEqu)
+                    cv2.imwrite('/home/sayong/car/lane6'+str(total2)+'.png', equ)
+                    cv2.imwrite('/home/sayong/car1/lane6'+str(total2)+'.png', crop_img)
                     lane2.remove(fObj2)
             for i in lane2:
                 i["stat"] = False
