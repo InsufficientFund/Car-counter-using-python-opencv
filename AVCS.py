@@ -141,8 +141,12 @@ class AVCS:
             cv2.imshow('background', bgFrame)
             frameOrigin = deepcopy(frame)
             res = frame
-            cv2.polylines(frame, [self.points[0]], True, (0, 255, 0), 3)
-            cv2.polylines(frame, [self.points[1]], True, (125, 0, 255), 3)
+
+            for point in self.lanePoints:
+                cv2.polylines(frame, [point], True, (0, 255, 0), 3)
+
+            #cv2.polylines(frame, [self.points[0]], True, (0, 255, 0), 3)
+            #cv2.polylines(frame, [self.points[1]], True, (125, 0, 255), 3)
             filteredFrame = cv2.GaussianBlur(frame, (5, 5), 0)
             if self.fgMask is None:
                 self.fgMask = self.subtractor.apply(filteredFrame, -1)
