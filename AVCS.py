@@ -65,17 +65,6 @@ class AVCS:
     def readVideo(self, inputName):
         self.video = cv2.VideoCapture(inputName)
 
-    def setLane(self, laneNum, upLeft, upRight, lowLeft, lowRight):
-        self.lane[str(laneNum)] = {"upLeft": upLeft, "upRight": upRight,
-                                   "lowLeft": lowLeft, "lowRight": lowRight,
-                                   "is_empty": True, "pts": []}
-        self.points[laneNum] = np.array([[self.lane[str(laneNum)]["upLeft"]],
-                                        [self.lane[str(laneNum)]["upRight"]],
-                                        [self.lane[str(laneNum)]["lowRight"]],
-                                        [self.lane[str(laneNum)]["lowLeft"]]], np.int32)
-        cv2.fillPoly(self.laneIm[laneNum], [self.points[laneNum]], 255)
-        self.laneContour[laneNum], hrc = cv2.findContours(self.laneIm[laneNum], cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-
     def addLane(self, upLeft, upRight, lowLeft, lowRight):
         self.lanes.append({"upLeft": upLeft, "upRight": upRight,
                            "lowLeft": lowLeft, "lowRight": lowRight,
@@ -129,7 +118,6 @@ class AVCS:
         dataPlot = []
         test = None
         while self.video.isOpened():
-            currentObj = []
             ret, frame = self.video.read()
             if not ret:
                 break
@@ -154,6 +142,7 @@ class AVCS:
             self.fgMask = cv2.morphologyEx(self.fgMask, cv2.MORPH_CLOSE, np.ones((30, 30), np.uint8))
             self.fgMask = cv2.morphologyEx(self.fgMask, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
             tempMask = deepcopy(self.fgMask)
+# Section tracking and Detection
             contours, hrc = cv2.findContours(tempMask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_KCOS)
             isIn = [False] * self.totalLane
             laneObj = [[] for x in range(self.totalLane)]
@@ -237,11 +226,11 @@ class AVCS:
                         cv2.polylines(res, np.int32([i["point"]]), False, (0, 255, 255), 3)
                 lanes[numLane] = tempLane
 
+# Section Draw TrackLine
             for obj in contours:
                 moment = cv2.moments(obj)
                 if moment['m00'] == 0:
                     continue
-
                 pX, pY, w, h = cv2.boundingRect(obj)
                 cx = int(moment['m10']/moment['m00'])
                 cy = int(moment['m01']/moment['m00'])+h/2
@@ -256,7 +245,6 @@ class AVCS:
                         if self.lanes[numLane]["is_empty"]:
                             self.lanes[numLane]["is_empty"] = False
                             self.lanes[numLane]["pts"].append((cx, cy))
-
                         else:
                             self.lanes[numLane]["pts"].insert(0, (cx, cy))
                         break
