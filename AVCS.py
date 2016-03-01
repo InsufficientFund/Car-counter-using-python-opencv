@@ -256,7 +256,6 @@ class AVCS:
                         if self.lanes[numLane]["is_empty"]:
                             self.lanes[numLane]["is_empty"] = False
                             self.lanes[numLane]["pts"].append((cx, cy))
-                            #self.count[i] += 1
                             self.count[numLane] += 1
                             self.sizeCar[numLane].append([w/float(h), w*h/cv2.contourArea(self.laneContours[numLane][0])])
 
