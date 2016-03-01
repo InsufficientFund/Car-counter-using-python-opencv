@@ -51,7 +51,7 @@ class AVCS:
                         np.zeros((480, 640), np.uint8)]
         self.lanesImage = []
         self.laneContour = [None] * 2
-        self.laneContours = [None]
+        self.laneContours = []
         self.points = [None] * 2
         self.lanePoints = []
         self.sizeCar =[[], []]
@@ -82,8 +82,8 @@ class AVCS:
                            "is_empty": True, "pts": []})
         point = np.array([[upLeft],
                           [upRight],
-                          [lowLeft],
-                          [lowRight]], np.int32)
+                          [lowRight],
+                          [lowLeft]], np.int32)
         self.lanePoints.append(point)
         laneImage = np.zeros((480, 640), np.uint8)
         cv2.fillPoly(laneImage, [point], 255)
@@ -123,13 +123,15 @@ class AVCS:
 
         avg = np.float32(self.sampleFrame)
 
-        lanes = [] * self.totalLane
+        #lanes = [[]] * self.totalLane
+        lanes = [[] for x in range(self.totalLane)]
         numCars = [] * self.totalLane
 
         lane1 = []
         lane2 = []
         total1 = 0
         total2 = 0
+        totalCars = [0] * self.totalLane
         dataPlot = []
         test = None
         while self.video.isOpened():
@@ -151,7 +153,7 @@ class AVCS:
             if self.fgMask is None:
                 self.fgMask = self.subtractor.apply(filteredFrame, -1)
                 test = deepcopy(self.fgMask)
-            self.fgMask = self.subtractor.apply(filteredFrame,self.fgMask, -1)
+            self.fgMask = self.subtractor.apply(filteredFrame, self.fgMask, -1)
             #test = deepcopy(self.fgMask)
             self.fgMask = cv2.dilate(self.fgMask, kernel, iterations=1)
             self.fgMask = cv2.erode(self.fgMask, kernel, iterations=1)
@@ -161,10 +163,13 @@ class AVCS:
             self.fgMask = cv2.morphologyEx(self.fgMask, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
             tempMask = deepcopy(self.fgMask)
             contours, hrc = cv2.findContours(tempMask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_KCOS)
-            isIn = [False]*2
-            laneObj = [[], []]
+            isIn = [False] * self.totalLane
+            #laneObj = [[]] * self.totalLane
+            laneObj = [[] for x in range(self.totalLane)]
             outLane1 = []
             outLane2 = []
+            #outLane = [[]] * self.totalLane
+            outLane = [[] for x in range(self.totalLane)]
             for obj in contours:
                 moment = cv2.moments(obj)
                 if moment['m00'] == 0:
@@ -172,144 +177,225 @@ class AVCS:
                 cx = int(moment['m10']/moment['m00'])
                 cy = int(moment['m01']/moment['m00'])
                 pX, pY, w, h = cv2.boundingRect(obj)
-                if cv2.pointPolygonTest(self.laneContour[0][0], (cx, cy), False) == 1:
-                    carObj = {"centroid": (cx, cy+h/2), "origin": (pX, pY), "height": h, "width": w}
-                    laneObj[0].append(carObj)
-                elif cv2.pointPolygonTest(self.laneContour[1][0], (cx, cy), False) == 1:
-                    carObj = {"centroid": (cx, cy+h/2), "origin": (pX, pY), "height": h, "width": w}
-                    laneObj[1].append(carObj)
-                elif cx >= 123 and cx <= 232 and cy >= 285 and cy <= 336 :
-                    carObj = {"centroid": (cx, cy+h/2), "origin": (pX, pY), "height": h, "width": w}
-                    outLane1.append(carObj)
-                elif cx >= 232 and cx <= 356 and cy >= 285 and cy <= 336 :
-                    carObj = {"centroid": (cx, cy+h/2), "origin": (pX, pY), "height": h, "width": w}
-                    outLane2.append(carObj)
 
-            for i in outLane1:
-                diff1 = 51
-                fObj1 = None
-                for j in lane1:
-                    diff = math.fabs(j["point"][0][0] - i["centroid"][0]) + math.fabs(j["point"][0][1] - i["centroid"][1])
-                    if diff < diff1:
-                        diff1 = diff
-                        fObj1 = j
-                if fObj1 != None:
-                    total1 += 1
-                    dataPlot.append(i["height"] * i["width"])
-                    if i["height"] * i["width"] < 2500:
-                        self.typeCar["small"] += 1
-                    elif i["height"] * i["width"] < 25000:
-                        self.typeCar["medium"] += 1
+                isNotLane = True
+                for numLane in range(len(self.laneContours)):
+                    if cv2.pointPolygonTest(self.laneContours[numLane][0], (cx, cy), False) == 1:
+                        carObj = {"centroid": (cx, cy+h/2), "origin": (pX, pY), "height": h, "width": w}
+                        laneObj[numLane].append(carObj)
+                        isNotLane = False
+                        break
+                if isNotLane:
+                    for numLane in range(len(self.laneContours)):
+                        lanePoint =  self.lanePoints[numLane]
+
+                        if cx >= lanePoint[3][0][0] and cx <= lanePoint[2][0][0]\
+                                and cy >= lanePoint[3][0][1]  and cy <= lanePoint[3][0][1]+50:
+                            #import ipdb;ipdb.set_trace()
+                            carObj = {"centroid": (cx, cy+h/2), "origin": (pX, pY), "height": h, "width": w}
+                            outLane[numLane].append(carObj)
+#----------------------
+                # if cv2.pointPolygonTest(self.laneContour[0][0], (cx, cy), False) == 1:
+                #     carObj = {"centroid": (cx, cy+h/2), "origin": (pX, pY), "height": h, "width": w}
+                #     laneObj[0].append(carObj)
+                # elif cv2.pointPolygonTest(self.laneContour[1][0], (cx, cy), False) == 1:
+                #     carObj = {"centroid": (cx, cy+h/2), "origin": (pX, pY), "height": h, "width": w}
+                #     laneObj[1].append(carObj)
+                # elif cx >= 123 and cx <= 232 and cy >= 285 and cy <= 336 :
+                #     carObj = {"centroid": (cx, cy+h/2), "origin": (pX, pY), "height": h, "width": w}
+                #     outLane1.append(carObj)
+                # elif cx >= 232 and cx <= 356 and cy >= 285 and cy <= 336 :
+                #     carObj = {"centroid": (cx, cy+h/2), "origin": (pX, pY), "height": h, "width": w}
+                #     outLane2.append(carObj)
+#------------------------
+            for numLane in range(len(self.laneContours)):
+                for i in outLane[numLane]:
+                    diffRange = 50
+                    foundedObj = None
+                    for j in lanes[numLane]:
+                        diff = math.fabs(j["point"][0][0] - i["centroid"][0]) + math.fabs(j["point"][0][1] - i["centroid"][1])
+                        if diff < diffRange:
+                            diffRange = diff
+                            foundedObj = j
+                    print foundedObj
+                    if foundedObj != None:
+                        totalCars[numLane] += 1
+                        dataPlot.append(i["height"] * i["width"])
+                        if i["height"] * i["width"] < 2500:
+                            self.typeCar["small"] += 1
+                        elif i["height"] * i["width"] < 25000:
+                            self.typeCar["medium"] += 1
+                        else:
+                            self.typeCar["large"] += 1
+                        originX = i["origin"][0]
+                        originY = i["origin"][1]
+                        crop_img = frameOrigin[originY:originY + i["height"], originX:originX+i["width"]]
+                        normalImage = cv2.resize(crop_img, (64, 64))
+                        grayImg = cv2.cvtColor(normalImage, cv2.COLOR_BGR2GRAY)
+                        hist, lbp = self.lbp.describe(grayImg)
+                        equ = cv2.equalizeHist(grayImg)
+                        #cv2.imwrite('/home/sayong/car/lane5'+str(totalCars[numLane])+'.png', equ)
+                        #cv2.imwrite('/home/sayong/car1/lane5'+str(totalCars[numLane])+'.png', crop_img)
+                        lanes[numLane].remove(foundedObj)
+                #import ipdb;ipdb.set_trace()
+                for i in lanes[numLane]:
+                    i["stat"] = False
+                for i in laneObj[numLane]:
+                    diffRange = 50
+                    foundedObj = None
+                    for j in lanes[numLane]:
+                        #import ipdb;ipdb.set_trace()
+                        diff = math.fabs(j["point"][0][0] - i["centroid"][0]) + math.fabs(j["point"][0][1] - i["centroid"][1])
+
+                        if diff < diffRange:
+                            diffRange = diff
+                            foundedObj = j
+                    if foundedObj != None:
+                        foundedObj["point"].insert(0, i["centroid"])
+                        foundedObj["stat"] = True
                     else:
-                        self.typeCar["large"] += 1
-                    originX = i["origin"][0]
-                    originY = i["origin"][1]
-                    crop_img = frameOrigin[originY:originY + i["height"], originX:originX+i["width"]]
-                    normalImage = cv2.resize(crop_img, (64, 64))
-                    grayImg = cv2.cvtColor(normalImage, cv2.COLOR_BGR2GRAY)
-                    hist, lbp = self.lbp.describe(grayImg)
-                    equ = cv2.equalizeHist(grayImg)
-                    cv2.imwrite('/home/sayong/car/lane5'+str(total1)+'.png', equ)
-                    cv2.imwrite('/home/sayong/car1/lane5'+str(total1)+'.png', crop_img)
-                    lane1.remove(fObj1)
+                        lanes[numLane].append({ "point": [i["centroid"]], "stat": True })
+                tempLane =[]
+                for i in lanes[numLane]:
+                    if i["stat"]:
+                        tempLane.append(i)
+                        cv2.polylines(res, np.int32([i["point"]]), False, (0, 255, 255), 3)
+                lanes[numLane] = tempLane
 
-            for i in lane1:
-                i["stat"] = False
-            for i in laneObj[0]:
-                diff1 = 51
-                fObj1 = None
-                for j in lane1:
-                    #import ipdb;ipdb.set_trace()
-                    diff = math.fabs(j["point"][0][0] - i["centroid"][0]) + math.fabs(j["point"][0][1] - i["centroid"][1])
-
-                    if diff < diff1:
-                        diff1 = diff
-                        fObj1 = j
-                if fObj1 != None:
-                    fObj1["point"].insert(0, i["centroid"])
-                    fObj1["stat"] = True
-                else:
-                    lane1.append({ "point": [i["centroid"]], "stat": True })
-            tempLane =[]
-            for i in lane1:
-                if i["stat"]:
-                    tempLane.append(i)
-                    cv2.polylines(res, np.int32([i["point"]]), False, (0, 255, 255), 3)
-            lane1 = tempLane
-
-            for i in outLane2:
-                diff2 = 51
-                fObj2 = None
-                for j in lane2:
-                    diff = math.fabs(j["point"][0][0] - i["centroid"][0]) + math.fabs(j["point"][0][1] - i["centroid"][1])
-                    if diff < diff2:
-                        diff2 = diff
-                        fObj2 = j
-                if fObj2 != None:
-                    total2 += 1
-                    dataPlot.append(i["height"] * i["width"])
-                    if i["height"] * i["width"] < 2500:
-                        self.typeCar["small"] += 1
-                    elif i["height"] * i["width"] < 25000:
-                        self.typeCar["medium"] += 1
-                    else:
-                        self.typeCar["large"] += 1
-                    originX = i["origin"][0]
-                    originY = i["origin"][1]
-                    crop_img = frameOrigin[originY:originY + i["height"], originX:originX+i["width"]]
-                    normalImage = cv2.resize(crop_img, (64, 64))
-                    grayImg = cv2.cvtColor(normalImage, cv2.COLOR_BGR2GRAY)
-                    hist, lbp = self.lbp.describe(grayImg)
-                    equ = cv2.equalizeHist(grayImg)
-                    cv2.imwrite('/home/sayong/car/lane6'+str(total2)+'.png', equ)
-                    cv2.imwrite('/home/sayong/car1/lane6'+str(total2)+'.png', crop_img)
-                    lane2.remove(fObj2)
-            for i in lane2:
-                i["stat"] = False
-            for i in laneObj[1]:
-                diff2 = 51
-                fObj2 = None
-                for j in lane2:
-                    #import ipdb;ipdb.set_trace()
-                    diff = math.fabs(j["point"][0][0] - i["centroid"][0]) + math.fabs(j["point"][0][1] - i["centroid"][1])
-
-                    if diff < diff2:
-                        diff2 = diff
-                        fObj2 = j
-                if fObj2 != None:
-                    fObj2["point"].insert(0, i["centroid"])
-                    fObj2["stat"] = True
-                else:
-                    lane2.append({ "point": [i["centroid"]], "stat": True })
-            tempLane =[]
-            for i in lane2:
-                if i["stat"]:
-                    tempLane.append(i)
-                    cv2.polylines(res, np.int32([i["point"]]), False, (0, 255, 255), 3)
-            lane2 = tempLane
-
+#-----------------------------------------------
+            # for i in outLane1:
+            #     diff1 = 51
+            #     fObj1 = None
+            #     for j in lane1:
+            #         diff = math.fabs(j["point"][0][0] - i["centroid"][0]) + math.fabs(j["point"][0][1] - i["centroid"][1])
+            #         if diff < diff1:
+            #             diff1 = diff
+            #             fObj1 = j
+            #     if fObj1 != None:
+            #         total1 += 1
+            #         dataPlot.append(i["height"] * i["width"])
+            #         if i["height"] * i["width"] < 2500:
+            #             self.typeCar["small"] += 1
+            #         elif i["height"] * i["width"] < 25000:
+            #             self.typeCar["medium"] += 1
+            #         else:
+            #             self.typeCar["large"] += 1
+            #         originX = i["origin"][0]
+            #         originY = i["origin"][1]
+            #         crop_img = frameOrigin[originY:originY + i["height"], originX:originX+i["width"]]
+            #         normalImage = cv2.resize(crop_img, (64, 64))
+            #         grayImg = cv2.cvtColor(normalImage, cv2.COLOR_BGR2GRAY)
+            #         hist, lbp = self.lbp.describe(grayImg)
+            #         equ = cv2.equalizeHist(grayImg)
+            #         cv2.imwrite('/home/sayong/car/lane5'+str(total1)+'.png', equ)
+            #         cv2.imwrite('/home/sayong/car1/lane5'+str(total1)+'.png', crop_img)
+            #         lane1.remove(fObj1)
+            #
+            # for i in lane1:
+            #     i["stat"] = False
+            # for i in laneObj[0]:
+            #     diff1 = 51
+            #     fObj1 = None
+            #     for j in lane1:
+            #         #import ipdb;ipdb.set_trace()
+            #         diff = math.fabs(j["point"][0][0] - i["centroid"][0]) + math.fabs(j["point"][0][1] - i["centroid"][1])
+            #
+            #         if diff < diff1:
+            #             diff1 = diff
+            #             fObj1 = j
+            #     if fObj1 != None:
+            #         fObj1["point"].insert(0, i["centroid"])
+            #         fObj1["stat"] = True
+            #     else:
+            #         lane1.append({ "point": [i["centroid"]], "stat": True })
+            # tempLane =[]
+            # for i in lane1:
+            #     if i["stat"]:
+            #         tempLane.append(i)
+            #         cv2.polylines(res, np.int32([i["point"]]), False, (0, 255, 255), 3)
+            # lane1 = tempLane
+            #
+            # for i in outLane2:
+            #     diff2 = 51
+            #     fObj2 = None
+            #     for j in lane2:
+            #         diff = math.fabs(j["point"][0][0] - i["centroid"][0]) + math.fabs(j["point"][0][1] - i["centroid"][1])
+            #         if diff < diff2:
+            #             diff2 = diff
+            #             fObj2 = j
+            #     if fObj2 != None:
+            #         total2 += 1
+            #         dataPlot.append(i["height"] * i["width"])
+            #         if i["height"] * i["width"] < 2500:
+            #             self.typeCar["small"] += 1
+            #         elif i["height"] * i["width"] < 25000:
+            #             self.typeCar["medium"] += 1
+            #         else:
+            #             self.typeCar["large"] += 1
+            #         originX = i["origin"][0]
+            #         originY = i["origin"][1]
+            #         crop_img = frameOrigin[originY:originY + i["height"], originX:originX+i["width"]]
+            #         normalImage = cv2.resize(crop_img, (64, 64))
+            #         grayImg = cv2.cvtColor(normalImage, cv2.COLOR_BGR2GRAY)
+            #         hist, lbp = self.lbp.describe(grayImg)
+            #         equ = cv2.equalizeHist(grayImg)
+            #         cv2.imwrite('/home/sayong/car/lane6'+str(total2)+'.png', equ)
+            #         cv2.imwrite('/home/sayong/car1/lane6'+str(total2)+'.png', crop_img)
+            #         lane2.remove(fObj2)
+            # for i in lane2:
+            #     i["stat"] = False
+            # for i in laneObj[1]:
+            #     diff2 = 51
+            #     fObj2 = None
+            #     for j in lane2:
+            #         #import ipdb;ipdb.set_trace()
+            #         diff = math.fabs(j["point"][0][0] - i["centroid"][0]) + math.fabs(j["point"][0][1] - i["centroid"][1])
+            #
+            #         if diff < diff2:
+            #             diff2 = diff
+            #             fObj2 = j
+            #     if fObj2 != None:
+            #         fObj2["point"].insert(0, i["centroid"])
+            #         fObj2["stat"] = True
+            #     else:
+            #         lane2.append({ "point": [i["centroid"]], "stat": True })
+            # tempLane =[]
+            # for i in lane2:
+            #     if i["stat"]:
+            #         tempLane.append(i)
+            #         cv2.polylines(res, np.int32([i["point"]]), False, (0, 255, 255), 3)
+            # lane2 = tempLane
+#-----------------------------------------------
 
             for obj in contours:
                 moment = cv2.moments(obj)
                 if moment['m00'] == 0:
                     continue
 
-
                 pX, pY, w, h = cv2.boundingRect(obj)
                 cx = int(moment['m10']/moment['m00'])
                 cy = int(moment['m01']/moment['m00'])+h/2
                 cv2.circle(res, (cx, cy), 3, (0, 0, 255), 4)
-                distance = [cv2.pointPolygonTest(self.laneContour[0][0], (cx, cy), False),
-                            cv2.pointPolygonTest(self.laneContour[1][0], (cx, cy), False)]
-                for i in range(0, 2):
-                    if distance[i] == 1:
-                        isIn[i] = True
+                # distance = [cv2.pointPolygonTest(self.laneContour[0][0], (cx, cy), False),
+                #             cv2.pointPolygonTest(self.laneContour[1][0], (cx, cy), False)]
+                #self.laneContours[numLane][0]
+                distance = []
+                for numLane in range(len(self.laneContours)):
+                    distance.append(cv2.pointPolygonTest(self.laneContours[numLane][0], (cx, cy), False))
+                for numLane in range(len(self.laneContours)):
+                    if distance[numLane] == 1:
+                        isIn[numLane] = True
                         cv2.rectangle(res, (pX, pY), (pX+w, pY+h), (0, 255, 255), 2)
-                        if self.lane[str(i)]["is_empty"]:
-                            self.lane[str(i)]["is_empty"] = False
-                            self.lane[str(i)]["pts"].append((cx, cy))
-                            self.count[i] += 1
-                            self.sizeCar[i].append([w/float(h), w*h/cv2.contourArea(self.laneContour[i][0])])
+                        #if self.lane[str(i)]["is_empty"]:
+                        if self.lanes[numLane]["is_empty"]:
+                            #self.lane[str(i)]["is_empty"] = False
+                            self.lanes[numLane]["is_empty"] = False
+                            #self.lane[str(i)]["pts"].append((cx, cy))
+                            self.lanes[numLane]["pts"].append((cx, cy))
+                            #self.count[i] += 1
+                            self.count[numLane] += 1
+                            #self.sizeCar[i].append([w/float(h), w*h/cv2.contourArea(self.laneContour[i][0])])
+                            self.sizeCar[numLane].append([w/float(h), w*h/cv2.contourArea(self.laneContours[numLane][0])])
                             # if w*h < 1600:
                             #     self.typeCar["small"] += 1
                             # elif w*h < 9500:
@@ -318,7 +404,8 @@ class AVCS:
                             #     self.typeCar["large"] += 1
 
                         else:
-                            self.lane[str(i)]["pts"].insert(0, (cx, cy))
+                            #self.lane[str(i)]["pts"].insert(0, (cx, cy))
+                            self.lanes[numLane]["pts"].insert(0, (cx, cy))
                         break
                     else:
                         cv2.rectangle(res, (pX, pY), (pX+w, pY+h), (255, 255, 0), 2)
@@ -328,13 +415,15 @@ class AVCS:
                         #cv2.polylines(res, np.int32([self.lane[str(i)]["pts"]]), False, (0, 255, 255), 3)
                         pass
                 else:
-                    self.lane[str(i)]["is_empty"] = True
-                    self.lane[str(i)]["pts"] = []
+                    # self.lane[str(i)]["is_empty"] = True
+                    # self.lane[str(i)]["pts"] = []
+                    self.lanes[numLane]["is_empty"] = True
+                    self.lanes[numLane]["pts"] = []
             if cntStatus:
                 #cv2.putText(res, 'lane1: '+str(self.count[0]), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
                 #cv2.putText(res, 'lane2: '+str(self.count[1]), (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (125, 0, 255), 2)
-                cv2.putText(res, 'lane1: '+str(total1), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-                cv2.putText(res, 'lane2: '+str(total2), (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (125, 0, 255), 2)
+                cv2.putText(res, 'lane1: '+str(totalCars[0]), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+                cv2.putText(res, 'lane2: '+str(totalCars[1]), (10, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (125, 0, 255), 2)
                 cv2.putText(res, 'truck/bus: '+str( self.typeCar["large"]), (400, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                 cv2.putText(res, 'small car: '+str( self.typeCar["medium"]), (400, 70), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
                 cv2.putText(res, 'motorcycle: '+str( self.typeCar["small"]), (400, 110), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
