@@ -256,8 +256,6 @@ class AVCS:
                         if self.lanes[numLane]["is_empty"]:
                             self.lanes[numLane]["is_empty"] = False
                             self.lanes[numLane]["pts"].append((cx, cy))
-                            self.count[numLane] += 1
-                            self.sizeCar[numLane].append([w/float(h), w*h/cv2.contourArea(self.laneContours[numLane][0])])
 
                         else:
                             self.lanes[numLane]["pts"].insert(0, (cx, cy))
@@ -287,7 +285,7 @@ class AVCS:
                     cv2.imwrite('tesM.png', self.fgMask)
                     break
 
-        print self.count
+        print totalCars
         self.video.release()
         vidWriter.release()
         cv2.destroyAllWindows()
@@ -313,10 +311,6 @@ class AVCS:
         # plt.title('KMeans')
         # plt.grid(True)
         # plt.show()
-        plt.figure(3)
-        plt.plot(dataPlot)
-        plt.ylabel('some numbers')
-        plt.show()
         # print dataPlot
         # members = []
         # for cluster in range(3):
