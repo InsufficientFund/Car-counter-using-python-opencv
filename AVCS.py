@@ -290,7 +290,6 @@ class AVCS:
         vidWriter.release()
         cv2.destroyAllWindows()
         print self.typeCar
-        #print currentObj
         # totalAtr = np.array(self.sizeCar[0] + self.sizeCar[1])
         # k_means = KMeans(init='k-means++', n_clusters=3, n_init=10)
         # k_means.fit(totalAtr)
