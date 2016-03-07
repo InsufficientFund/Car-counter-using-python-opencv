@@ -181,7 +181,6 @@ class AVCS:
                         if diff < diffRange:
                             diffRange = diff
                             foundedObj = j
-                    print foundedObj
                     if foundedObj != None:
                         totalCars[numLane] += 1
                         dataPlot.append(i["height"] * i["width"])
@@ -198,8 +197,8 @@ class AVCS:
                         grayImg = cv2.cvtColor(normalImage, cv2.COLOR_BGR2GRAY)
                         hist, lbp = self.lbp.describe(grayImg)
                         equ = cv2.equalizeHist(grayImg)
-                        #cv2.imwrite('/home/sayong/car/lane5'+str(totalCars[numLane])+'.png', equ)
-                        #cv2.imwrite('/home/sayong/car1/lane5'+str(totalCars[numLane])+'.png', crop_img)
+                        cv2.imwrite('/home/sayong/car/lane'+str(numLane + 6)+str(totalCars[numLane])+'.png', equ)
+                        cv2.imwrite('/home/sayong/car1/lane'+str(numLane + 6)+str(totalCars[numLane])+'.png', crop_img)
                         lanes[numLane].remove(foundedObj)
 
                 for i in lanes[numLane]:
@@ -268,7 +267,7 @@ class AVCS:
                 resMask = cv2.bitwise_and(frame, frame, mask=~self.fgMask)
                 cv2.imshow('frame', res)
                 vidWriter.write(res)
-                if cv2.waitKey(8) & 0xFF == ord('q'):
+                if cv2.waitKey(5) & 0xFF == ord('q'):
                     cv2.imwrite('tesf.png', frameOrigin)
                     cv2.imwrite('tesM.png', self.fgMask)
                     break
