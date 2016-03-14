@@ -142,6 +142,7 @@ class AVCS:
             self.fgMask = cv2.morphologyEx(self.fgMask, cv2.MORPH_CLOSE, np.ones((30, 30), np.uint8))
             self.fgMask = cv2.morphologyEx(self.fgMask, cv2.MORPH_OPEN, np.ones((5, 5), np.uint8))
             tempMask = deepcopy(self.fgMask)
+            carImg = cv2.bitwise_and(frameOrigin, frameOrigin, mask=self.fgMask)
 # Section tracking and Detection
             contours, hrc = cv2.findContours(tempMask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_TC89_KCOS)
             isIn = [False] * self.totalLane
@@ -193,12 +194,17 @@ class AVCS:
                         originX = i["origin"][0]
                         originY = i["origin"][1]
                         crop_img = frameOrigin[originY:originY + i["height"], originX:originX+i["width"]]
+                        #crop_img2 = bgFrame[originY:originY + i["height"], originX:originX+i["width"]]
+                        #bgrm_img = cv2.absdiff(crop_img2, crop_img)
                         normalImage = cv2.resize(crop_img, (64, 64))
                         grayImg = cv2.cvtColor(normalImage, cv2.COLOR_BGR2GRAY)
+                        # grayImg = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
+                        # normalImage = cv2.resize(grayImg, (64, 64))
                         hist, lbp = self.lbp.describe(grayImg)
                         equ = cv2.equalizeHist(grayImg)
-                        cv2.imwrite('/home/sayong/car/lane'+str(numLane + 6)+str(totalCars[numLane])+'.png', equ)
-                        cv2.imwrite('/home/sayong/car1/lane'+str(numLane + 6)+str(totalCars[numLane])+'.png', crop_img)
+
+                        cv2.imwrite('/home/sayong/car/lane'+str(numLane + 4)+str(totalCars[numLane])+'.png', equ)
+                        cv2.imwrite('/home/sayong/car1/lane'+str(numLane + 4)+str(totalCars[numLane])+'.png', crop_img)
                         lanes[numLane].remove(foundedObj)
 
                 for i in lanes[numLane]:
