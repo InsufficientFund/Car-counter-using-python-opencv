@@ -3,6 +3,49 @@ import numpy as np
 import pandas as pd
 from sklearn import preprocessing
 
+
+class neural_net:
+
+    def __init__(self, num_feature, num_class ):
+        self.num_feature = num_feature
+        self.num_class = num_class
+        self.listFeature = ['i' for i in range(75)]
+        self.feature_dict = {i:label for i, label in zip(
+                    range(75), tuple(self.listFeature))}
+        self.neural_struct = None
+        self.weight_in = None
+        self.weight_out = None
+        self.data_placeholder = tf.placeholder("float", [None, self.num_feature])
+        self.answer_placeholder = tf.placeholder("float", [None, self.num_class])
+        self.train_op = None
+        self.predict_op = None
+
+    def init_weights(shape):
+        return tf.Variable(tf.random_normal(shape, stddev=0.01))
+
+    def model(X, w_h, w_o):
+        h = tf.nn.sigmoid(tf.matmul(X, w_h)) # this is a basic mlp, think 2 stacked logistic regressions
+        return tf.matmul(h, w_o) # note that we dont take the softmax at the end because our cost fn does that for us
+
+    def create_struct(self, num_neural):
+        self.weight_in = init_weights([self.num_feature, num_neural])
+        self.weight_out = init_weights([num_neural, self.num_class])
+        self.neural_struct = model(self.data_placeholder, self.weight_in, self.weight_out)
+        cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(self.neural_struct, self.weight_out))
+        self.train_op = tf.train.AdamOptimizer(0.001).minimize(cost)
+        self.predict_op = tf.argmax(self.neural_struct, 1)
+
+    def training(self, epoch):
+        sess = tf.Session()
+        init = tf.initialize_all_variables()
+        sess.run(init)
+        for i in range(epoch):
+            for start, end in zip(range(0, len(trX), 128), range(128, len(trX), 128)):
+                sess.run(self.train_op, feed_dict={self.data_placeholder: trX[start:end], self.answer_placeholder: trY[start:end]})
+            print i, np.mean(np.argmax(teY, axis=1) ==
+                             sess.run(self.predict_op, feed_dict={self.data_placeholder: teX, self.answer_placeholder: teY}))
+
+
 def init_weights(shape):
     return tf.Variable(tf.random_normal(shape, stddev=0.01))
 
