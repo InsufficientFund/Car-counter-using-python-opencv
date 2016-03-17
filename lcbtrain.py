@@ -41,8 +41,8 @@ def natural_keys(text):
     return [ atoi(c) for c in re.split('(\d+)', text) ]
 
 lbpClass = LocalBinaryPatterns(8, 1)
-listFile = glob.glob("/home/sayong/Project/Source/car/*.png")
-listDetialFile = glob.glob("/home/sayong/Project/Source/rgbCarTrain/*.png")
+listFile = glob.glob("/home/sayong/Project/Source/carData/car/*.png")
+listDetialFile = glob.glob("/home/sayong/Project/Source/carData/car1/*.png")
 n = 0
 listRange = [slice(0, 11), slice(11, 22), slice(22, 33),
              slice(33, 44), slice(44, 54), slice(54, 64)]
@@ -80,7 +80,7 @@ for fileP in listFile:
     featureList.append(np.hstack((histRatio, histMax, sizeList[index])))
     index += 1
 
-with open('data_raw.csv', 'w') as fp:
+with open('validated_raw.csv', 'w') as fp:
     a = csv.writer(fp, delimiter=',')
     a.writerows(featureList)
 fp.close()

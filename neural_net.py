@@ -65,8 +65,8 @@ for neuron in range(150, 151):
 
     py_x = model(X, w_h, w_o)
 
-    #cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(py_x, Y)) # compute costs
-    cost  = tf.reduce_mean(tf.pow(py_x-Y , 2))*0.5
+    cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(py_x, Y)) # compute costs
+    #cost  = tf.reduce_mean(tf.pow(py_x-Y , 2))*0.5
     #cost = -tf.reduce_sum(Y * tf.log(py_x))
     #train_op = tf.train.GradientDescentOptimizer(0.05).minimize(cost) # construct an optimizer
     train_op = tf.train.AdamOptimizer(0.001).minimize(cost)
@@ -76,7 +76,7 @@ for neuron in range(150, 151):
     init = tf.initialize_all_variables()
     sess.run(init)
 
-    for i in range(800):
+    for i in range(5000):
         for start, end in zip(range(0, len(trX), 128), range(128, len(trX), 128)):
             sess.run(train_op, feed_dict={X: trX[start:end], Y: trY[start:end]})
         print i, np.mean(np.argmax(teY, axis=1) ==

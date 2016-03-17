@@ -203,8 +203,8 @@ class AVCS:
                         hist, lbp = self.lbp.describe(grayImg)
                         equ = cv2.equalizeHist(grayImg)
 
-                        cv2.imwrite('/home/sayong/car/lane'+str(numLane + 4)+str(totalCars[numLane])+'.png', equ)
-                        cv2.imwrite('/home/sayong/car1/lane'+str(numLane + 4)+str(totalCars[numLane])+'.png', crop_img)
+                        cv2.imwrite('/home/sayong/carData/lane'+str(numLane + 0)+str(totalCars[numLane])+'.png', equ)
+                        cv2.imwrite('/home/sayong/carData/car1/lane'+str(numLane + 0)+str(totalCars[numLane])+'.png', crop_img)
                         lanes[numLane].remove(foundedObj)
 
                 for i in lanes[numLane]:
