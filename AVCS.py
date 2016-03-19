@@ -1,35 +1,7 @@
 import cv2
 import numpy as np
 from copy import deepcopy
-from skimage import feature
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-from sklearn.cluster import KMeans
 import math
-
-class LocalBinaryPatterns:
-    def __init__(self, numPoints, radius):
-        # store the number of points and radius
-        self.numPoints = numPoints
-        self.radius = radius
-
-    def describe(self, image, eps=1e-7):
-        # compute the Local Binary Pattern representation
-        # of the image, and then use the LBP representation
-        # to build the histogram of patterns
-        lbp = feature.local_binary_pattern(image, self.numPoints,
-            self.radius, method="uniform")
-        (hist, _) = np.histogram(lbp.ravel(),
-            bins=np.arange(0, self.numPoints + 2),
-            range=(0, self.numPoints + 1))
-
-        # normalize the histogram
-        hist = hist.astype("float")
-        hist /= (hist.sum() + eps)
-
-        # return the histogram of Local Binary Patterns
-        return hist, lbp
 
 class AVCS:
     """docstring for ClassName"""
@@ -56,7 +28,6 @@ class AVCS:
         self.lanePoints = []
         self.sizeCar =[[], []]
         self.typeCar = {"small": 0, "medium": 0, "large": 0}
-        self.lbp = LocalBinaryPatterns(8, 1)
         self.totalLane = 2
 
     def __del__(self):
@@ -108,7 +79,7 @@ class AVCS:
         self.video.set(cv2.cv.CV_CAP_PROP_POS_MSEC, 0)
         kernel = np.ones((10, 10), np.uint8)
         fourcc = cv2.cv.CV_FOURCC(*'XVID')
-        vidWriter = cv2.VideoWriter('/home/sayong/videos.avi', fourcc, 15, (640, 480))
+        #vidWriter = cv2.VideoWriter('/home/sayong/videos.avi', fourcc, 15, (640, 480))
 
         avg = np.float32(self.sampleFrame)
 
@@ -200,11 +171,10 @@ class AVCS:
                         grayImg = cv2.cvtColor(normalImage, cv2.COLOR_BGR2GRAY)
                         # grayImg = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
                         # normalImage = cv2.resize(grayImg, (64, 64))
-                        hist, lbp = self.lbp.describe(grayImg)
                         equ = cv2.equalizeHist(grayImg)
 
-                        cv2.imwrite('/home/sayong/carData/lane'+str(numLane + 0)+str(totalCars[numLane])+'.png', equ)
-                        cv2.imwrite('/home/sayong/carData/car1/lane'+str(numLane + 0)+str(totalCars[numLane])+'.png', crop_img)
+                        #cv2.imwrite('/home/sayong/carData/lane'+str(numLane + 0)+str(totalCars[numLane])+'.png', equ)
+                        #cv2.imwrite('/home/sayong/carData/car1/lane'+str(numLane + 0)+str(totalCars[numLane])+'.png', crop_img)
                         lanes[numLane].remove(foundedObj)
 
                 for i in lanes[numLane]:
@@ -272,7 +242,7 @@ class AVCS:
             if showVid:
                 resMask = cv2.bitwise_and(frame, frame, mask=~self.fgMask)
                 cv2.imshow('frame', res)
-                vidWriter.write(res)
+                #vidWriter.write(res)
                 if cv2.waitKey(5) & 0xFF == ord('q'):
                     cv2.imwrite('tesf.png', frameOrigin)
                     cv2.imwrite('tesM.png', self.fgMask)
@@ -280,7 +250,7 @@ class AVCS:
 
         print totalCars
         self.video.release()
-        vidWriter.release()
+        #vidWriter.release()
         cv2.destroyAllWindows()
         print self.typeCar
         # totalAtr = np.array(self.sizeCar[0] + self.sizeCar[1])

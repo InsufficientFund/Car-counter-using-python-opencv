@@ -40,6 +40,9 @@ def natural_keys(text):
     '''
     return [ atoi(c) for c in re.split('(\d+)', text) ]
 
+
+
+
 lbpClass = LocalBinaryPatterns(8, 1)
 listFile = glob.glob("/home/sayong/Project/Source/carData/car/*.png")
 listDetialFile = glob.glob("/home/sayong/Project/Source/carData/car1/*.png")
