@@ -12,23 +12,12 @@ class AVCS:
         self.sampleFrame = None
         #self.subtractor = cv2.BackgroundSubtractorMOG(history=150, nmixtures=20, backgroundRatio=0.7, noiseSigma=25)
         self.subtractor = cv2.BackgroundSubtractorMOG2(150, 200, False)
-        self.lane = {"0": {"upLeft": (0, 0), "upRight": (0, 0),
-                           "lowLeft": (0, 0), "lowRight": (0, 0),
-                     "is_empty": True, "pts": []},
-                     "1": {"upLeft": (0, 0), "upRight": (0, 0),
-                           "lowLeft": (0, 0), "lowRight": (0, 0),
-                           "is_empty": True, "pts": []}}
         self.lanes = []
-        self.laneIm = [np.zeros((480, 640), np.uint8),
-                        np.zeros((480, 640), np.uint8)]
         self.lanesImage = []
-        self.laneContour = [None] * 2
         self.laneContours = []
-        self.points = [None] * 2
         self.lanePoints = []
-        self.sizeCar =[[], []]
         self.typeCar = {"small": 0, "medium": 0, "large": 0}
-        self.totalLane = 2
+        self.totalLane = 0
 
     def __del__(self):
         pass
@@ -50,6 +39,7 @@ class AVCS:
         self.lanesImage.append(laneImage)
         contour, hrc = cv2.findContours(laneImage, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         self.laneContours.append(contour)
+        self.totalLane += 1
 
     def showPoint(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDBLCLK:
